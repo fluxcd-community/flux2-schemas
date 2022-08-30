@@ -1,0 +1,27 @@
+name: Fetch upstream
+
+on:
+  schedule:
+    - cron: 0 0 * * *
+
+jobs:
+  fetch-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Fetch files
+        run: |
+          curl -L https://github.com/fluxcd/flux2/releases/latest/download/crd-schemas.tar.gz | tar -zxvf -
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          delete-branch: true
+          title: "[bot] Automated update"
+          signoff: false
+          committer: Github <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          body: |
+            This is an automated update to manifest files from CI.
+            Configuration of the workflow is located in `.github/workflows/fetch-upstream.yaml`
+          labels: bot/update
