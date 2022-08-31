@@ -57,6 +57,13 @@
           "type": "object",
           "additionalProperties": false
         },
+        "exclusionList": {
+          "description": "ExclusionList is a list of regex strings used to exclude certain tags from being stored in the database.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "image": {
           "description": "Image is the name of the image repository",
           "type": "string"
@@ -78,6 +85,10 @@
           ],
           "type": "object",
           "additionalProperties": false
+        },
+        "serviceAccountName": {
+          "description": "ServiceAccountName is the name of the Kubernetes ServiceAccount used to authenticate the image pull if the service account has attached pull secrets.",
+          "type": "string"
         },
         "suspend": {
           "description": "This flag tells the controller to suspend subsequent image scans. It does not apply to already started scans. Defaults to false.",
@@ -103,7 +114,7 @@
         },
         "conditions": {
           "items": {
-            "description": "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{     // Represents the observations of a foo's current state.     // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type     // +patchStrategy=merge     // +listType=map     // +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n     // other fields }",
+            "description": "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n \ttype FooStatus struct{ \t    // Represents the observations of a foo's current state. \t    // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map \t    // +listMapKey=type \t    Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields \t}",
             "properties": {
               "lastTransitionTime": {
                 "description": "lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.",
