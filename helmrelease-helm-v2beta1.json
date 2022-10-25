@@ -85,6 +85,38 @@
                   },
                   "type": "array"
                 },
+                "verify": {
+                  "description": "Verify contains the secret name containing the trusted public keys used to verify the signature and specifies which provider to use to check whether OCI image is authentic. This field is only supported for OCI sources. Chart dependencies, which are not bundled in the umbrella chart artifact, are not verified.",
+                  "properties": {
+                    "provider": {
+                      "default": "cosign",
+                      "description": "Provider specifies the technology used to sign the OCI Helm chart.",
+                      "enum": [
+                        "cosign"
+                      ],
+                      "type": "string"
+                    },
+                    "secretRef": {
+                      "description": "SecretRef specifies the Kubernetes Secret containing the trusted public keys.",
+                      "properties": {
+                        "name": {
+                          "description": "Name of the referent.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "provider"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                },
                 "version": {
                   "default": "*",
                   "description": "Version semver expression, ignored for charts from v1beta2.GitRepository and v1beta2.Bucket sources. Defaults to latest when omitted.",
@@ -188,7 +220,7 @@
             },
             "timeout": {
               "description": "Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm install action. Defaults to 'HelmReleaseSpec.Timeout'.",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
               "type": "string"
             }
           },
@@ -458,7 +490,7 @@
             },
             "timeout": {
               "description": "Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm rollback action. Defaults to 'HelmReleaseSpec.Timeout'.",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
               "type": "string"
             }
           },
@@ -498,7 +530,7 @@
             },
             "timeout": {
               "description": "Timeout is the time to wait for any individual Kubernetes operation during the performance of a Helm test action. Defaults to 'HelmReleaseSpec.Timeout'.",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
               "type": "string"
             }
           },
@@ -527,7 +559,7 @@
             },
             "timeout": {
               "description": "Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm uninstall action. Defaults to 'HelmReleaseSpec.Timeout'.",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
               "type": "string"
             }
           },
@@ -603,7 +635,7 @@
             },
             "timeout": {
               "description": "Timeout is the time to wait for any individual Kubernetes operation (like Jobs for hooks) during the performance of a Helm upgrade action. Defaults to 'HelmReleaseSpec.Timeout'.",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
               "type": "string"
             }
           },
