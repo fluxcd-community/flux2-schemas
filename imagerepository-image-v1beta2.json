@@ -1,5 +1,5 @@
 {
-  "description": "HelmRepository is the Schema for the helmrepositories API.",
+  "description": "ImageRepository is the Schema for the imagerepositories API",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -13,10 +13,10 @@
       "type": "object"
     },
     "spec": {
-      "description": "HelmRepositorySpec specifies the required configuration to produce an Artifact for a Helm repository index YAML.",
+      "description": "ImageRepositorySpec defines the parameters for scanning an image repository, e.g., `fluxcd/flux`.",
       "properties": {
         "accessFrom": {
-          "description": "AccessFrom specifies an Access Control List for allowing cross-namespace references to this object. NOTE: Not implemented, provisional as of https://github.com/fluxcd/flux2/pull/2092",
+          "description": "AccessFrom defines an ACL for allowing cross-namespace references to the ImageRepository object based on the caller's namespace labels.",
           "properties": {
             "namespaceSelectors": {
               "description": "NamespaceSelectors is the list of namespace selectors to which this ACL applies. Items in this list are evaluated using a logical OR operation.",
@@ -43,28 +43,8 @@
           "type": "object",
           "additionalProperties": false
         },
-        "interval": {
-          "description": "Interval at which to check the URL for updates.",
-          "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
-          "type": "string"
-        },
-        "passCredentials": {
-          "description": "PassCredentials allows the credentials from the SecretRef to be passed on to a host that does not match the host as defined in URL. This may be required if the host of the advertised chart URLs in the index differ from the defined URL. Enabling this should be done with caution, as it can potentially result in credentials getting stolen in a MITM-attack.",
-          "type": "boolean"
-        },
-        "provider": {
-          "default": "generic",
-          "description": "Provider used for authentication, can be 'aws', 'azure', 'gcp' or 'generic'. This field is optional, and only taken into account if the .spec.type field is set to 'oci'. When not specified, defaults to 'generic'.",
-          "enum": [
-            "generic",
-            "aws",
-            "azure",
-            "gcp"
-          ],
-          "type": "string"
-        },
-        "secretRef": {
-          "description": "SecretRef specifies the Secret containing authentication credentials for the HelmRepository. For HTTP/S basic auth the secret must contain 'username' and 'password' fields. For TLS the secret must contain a 'certFile' and 'keyFile', and/or 'caFile' fields.",
+        "certSecretRef": {
+          "description": "CertSecretRef can be given the name of a secret containing either or both of \n - a PEM-encoded client certificate (`certFile`) and private key (`keyFile`); - a PEM-encoded CA certificate (`caFile`) \n and whichever are supplied, will be used for connecting to the registry. The client cert and key are useful if you are authenticating with a certificate; the CA cert is useful if you are using a self-signed server certificate.",
           "properties": {
             "name": {
               "description": "Name of the referent.",
@@ -77,33 +57,66 @@
           "type": "object",
           "additionalProperties": false
         },
-        "suspend": {
-          "description": "Suspend tells the controller to suspend the reconciliation of this HelmRepository.",
-          "type": "boolean"
+        "exclusionList": {
+          "default": [
+            "^.*\\.sig$"
+          ],
+          "description": "ExclusionList is a list of regex strings used to exclude certain tags from being stored in the database.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 25,
+          "type": "array"
         },
-        "timeout": {
-          "default": "60s",
-          "description": "Timeout is used for the index fetch operation for an HTTPS helm repository, and for remote OCI Repository operations like pulling for an OCI helm repository. Its default value is 60s.",
-          "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+        "image": {
+          "description": "Image is the name of the image repository",
           "type": "string"
         },
-        "type": {
-          "description": "Type of the HelmRepository. When this field is set to  \"oci\", the URL field value must be prefixed with \"oci://\".",
+        "interval": {
+          "description": "Interval is the length of time to wait between scans of the image repository.",
+          "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
+          "type": "string"
+        },
+        "provider": {
+          "default": "generic",
+          "description": "The provider used for authentication, can be 'aws', 'azure', 'gcp' or 'generic'. When not specified, defaults to 'generic'.",
           "enum": [
-            "default",
-            "oci"
+            "generic",
+            "aws",
+            "azure",
+            "gcp"
           ],
           "type": "string"
         },
-        "url": {
-          "description": "URL of the Helm repository, a valid URL contains at least a protocol and host.",
+        "secretRef": {
+          "description": "SecretRef can be given the name of a secret containing credentials to use for the image registry. The secret should be created with `kubectl create secret docker-registry`, or the equivalent.",
+          "properties": {
+            "name": {
+              "description": "Name of the referent.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "serviceAccountName": {
+          "description": "ServiceAccountName is the name of the Kubernetes ServiceAccount used to authenticate the image pull if the service account has attached pull secrets.",
+          "maxLength": 253,
+          "type": "string"
+        },
+        "suspend": {
+          "description": "This flag tells the controller to suspend subsequent image scans. It does not apply to already started scans. Defaults to false.",
+          "type": "boolean"
+        },
+        "timeout": {
+          "description": "Timeout for image scanning. Defaults to 'Interval' duration.",
+          "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
           "type": "string"
         }
       },
-      "required": [
-        "interval",
-        "url"
-      ],
       "type": "object",
       "additionalProperties": false
     },
@@ -111,59 +124,13 @@
       "default": {
         "observedGeneration": -1
       },
-      "description": "HelmRepositoryStatus records the observed state of the HelmRepository.",
+      "description": "ImageRepositoryStatus defines the observed state of ImageRepository",
       "properties": {
-        "artifact": {
-          "description": "Artifact represents the last successful HelmRepository reconciliation.",
-          "properties": {
-            "checksum": {
-              "description": "Checksum is the SHA256 checksum of the Artifact file. Deprecated: use Artifact.Digest instead.",
-              "type": "string"
-            },
-            "digest": {
-              "description": "Digest is the digest of the file in the form of '<algorithm>:<checksum>'.",
-              "pattern": "^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$",
-              "type": "string"
-            },
-            "lastUpdateTime": {
-              "description": "LastUpdateTime is the timestamp corresponding to the last update of the Artifact.",
-              "format": "date-time",
-              "type": "string"
-            },
-            "metadata": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "description": "Metadata holds upstream information such as OCI annotations.",
-              "type": "object"
-            },
-            "path": {
-              "description": "Path is the relative file path of the Artifact. It can be used to locate the file in the root of the Artifact storage on the local file system of the controller managing the Source.",
-              "type": "string"
-            },
-            "revision": {
-              "description": "Revision is a human-readable identifier traceable in the origin source system. It can be a Git commit SHA, Git tag, a Helm chart version, etc.",
-              "type": "string"
-            },
-            "size": {
-              "description": "Size is the number of bytes in the file.",
-              "format": "int64",
-              "type": "integer"
-            },
-            "url": {
-              "description": "URL is the HTTP address of the Artifact as exposed by the controller managing the Source. It can be used to retrieve the Artifact for consumption, e.g. by another controller applying the Artifact contents.",
-              "type": "string"
-            }
-          },
-          "required": [
-            "path",
-            "url"
-          ],
-          "type": "object",
-          "additionalProperties": false
+        "canonicalImageName": {
+          "description": "CanonicalName is the name of the image repository with all the implied bits made explicit; e.g., `docker.io/library/alpine` rather than `alpine`.",
+          "type": "string"
         },
         "conditions": {
-          "description": "Conditions holds the conditions for the HelmRepository.",
           "items": {
             "description": "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }",
             "properties": {
@@ -222,14 +189,40 @@
           "description": "LastHandledReconcileAt holds the value of the most recent reconcile request value, so a change of the annotation value can be detected.",
           "type": "string"
         },
+        "lastScanResult": {
+          "description": "LastScanResult contains the number of fetched tags.",
+          "properties": {
+            "latestTags": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "scanTime": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "tagCount": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "tagCount"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "observedExclusionList": {
+          "description": "ObservedExclusionList is a list of observed exclusion list. It reflects the exclusion rules used for the observed scan result in spec.lastScanResult.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "observedGeneration": {
-          "description": "ObservedGeneration is the last observed generation of the HelmRepository object.",
+          "description": "ObservedGeneration is the last reconciled generation.",
           "format": "int64",
           "type": "integer"
-        },
-        "url": {
-          "description": "URL is the dynamic fetch link for the latest Artifact. It is provided on a \"best effort\" basis, and using the precise HelmRepositoryStatus.Artifact data is recommended.",
-          "type": "string"
         }
       },
       "type": "object",
