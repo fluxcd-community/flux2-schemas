@@ -549,7 +549,7 @@
           "additionalProperties": false
         },
         "lastAppliedRevision": {
-          "description": "The last successfully applied revision. The revision format for Git sources is <branch|tag>/<commit-sha>.",
+          "description": "The last successfully applied revision. Equals the Revision of the applied Artifact from the referenced Source.",
           "type": "string"
         },
         "lastAttemptedRevision": {
