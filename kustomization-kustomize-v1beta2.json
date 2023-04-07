@@ -15,8 +15,29 @@
     "spec": {
       "description": "KustomizationSpec defines the configuration to calculate the desired state from a Source using Kustomize.",
       "properties": {
+        "commonMetadata": {
+          "description": "CommonMetadata specifies the common labels and annotations that are applied to all resources. Any existing label or annotation will be overridden if its key matches a common one.",
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Annotations to be added to the object's metadata.",
+              "type": "object"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Labels to be added to the object's metadata.",
+              "type": "object"
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        },
         "components": {
-          "description": "Components specifies relative paths to specifications of other Components",
+          "description": "Components specifies relative paths to specifications of other Components.",
           "items": {
             "type": "string"
           },
@@ -219,6 +240,9 @@
                 "additionalProperties": false
               }
             },
+            "required": [
+              "patch"
+            ],
             "type": "object",
             "additionalProperties": false
           },
