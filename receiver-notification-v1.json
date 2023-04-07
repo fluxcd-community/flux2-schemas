@@ -1,5 +1,5 @@
 {
-  "description": "Alert is the Schema for the alerts API",
+  "description": "Receiver is the Schema for the receivers API.",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -13,19 +13,23 @@
       "type": "object"
     },
     "spec": {
-      "description": "AlertSpec defines an alerting rule for events involving a list of objects.",
+      "description": "ReceiverSpec defines the desired state of the Receiver.",
       "properties": {
-        "eventSeverity": {
-          "default": "info",
-          "description": "EventSeverity specifies how to filter events based on severity. If set to 'info' no events will be filtered.",
-          "enum": [
-            "info",
-            "error"
-          ],
+        "events": {
+          "description": "Events specifies the list of event types to handle, e.g. 'push' for GitHub or 'Push Hook' for GitLab.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "interval": {
+          "default": "10m",
+          "description": "Interval at which to reconcile the Receiver with its Secret references.",
+          "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
           "type": "string"
         },
-        "eventSources": {
-          "description": "EventSources specifies how to filter events based on the involved object kind, name and namespace.",
+        "resources": {
+          "description": "A list of resources to be notified about changes.",
           "items": {
             "description": "CrossNamespaceObjectReference contains enough information to let you locate the typed referenced object at cluster level",
             "properties": {
@@ -78,15 +82,8 @@
           },
           "type": "array"
         },
-        "exclusionList": {
-          "description": "ExclusionList specifies a list of Golang regular expressions to be used for excluding messages.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "providerRef": {
-          "description": "ProviderRef specifies which Provider this Alert should use.",
+        "secretRef": {
+          "description": "SecretRef specifies the Secret containing the token used to validate the payload authenticity.",
           "properties": {
             "name": {
               "description": "Name of the referent.",
@@ -99,19 +96,32 @@
           "type": "object",
           "additionalProperties": false
         },
-        "summary": {
-          "description": "Summary holds a short description of the impact and affected cluster.",
-          "maxLength": 255,
-          "type": "string"
-        },
         "suspend": {
-          "description": "Suspend tells the controller to suspend subsequent events handling for this Alert.",
+          "description": "Suspend tells the controller to suspend subsequent events handling for this receiver.",
           "type": "boolean"
+        },
+        "type": {
+          "description": "Type of webhook sender, used to determine the validation procedure and payload deserialization.",
+          "enum": [
+            "generic",
+            "generic-hmac",
+            "github",
+            "gitlab",
+            "bitbucket",
+            "harbor",
+            "dockerhub",
+            "quay",
+            "gcr",
+            "nexus",
+            "acr"
+          ],
+          "type": "string"
         }
       },
       "required": [
-        "eventSources",
-        "providerRef"
+        "resources",
+        "secretRef",
+        "type"
       ],
       "type": "object",
       "additionalProperties": false
@@ -120,10 +130,10 @@
       "default": {
         "observedGeneration": -1
       },
-      "description": "AlertStatus defines the observed state of the Alert.",
+      "description": "ReceiverStatus defines the observed state of the Receiver.",
       "properties": {
         "conditions": {
-          "description": "Conditions holds the conditions for the Alert.",
+          "description": "Conditions holds the conditions for the Receiver.",
           "items": {
             "description": "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }",
             "properties": {
@@ -183,9 +193,17 @@
           "type": "string"
         },
         "observedGeneration": {
-          "description": "ObservedGeneration is the last observed generation.",
+          "description": "ObservedGeneration is the last observed generation of the Receiver object.",
           "format": "int64",
           "type": "integer"
+        },
+        "url": {
+          "description": "URL is the generated incoming webhook address in the format of '/hook/sha256sum(token+name+namespace)'. Deprecated: Replaced by WebhookPath.",
+          "type": "string"
+        },
+        "webhookPath": {
+          "description": "WebhookPath is the generated incoming webhook address in the format of '/hook/sha256sum(token+name+namespace)'.",
+          "type": "string"
         }
       },
       "type": "object",
