@@ -21,7 +21,7 @@
           "type": "string"
         },
         "certSecretRef": {
-          "description": "CertSecretRef specifies the Secret containing a PEM-encoded CA certificate (`caFile`).",
+          "description": "CertSecretRef specifies the Secret containing a PEM-encoded CA certificate (in the `ca.crt` key). \n Note: Support for the `caFile` key has been deprecated.",
           "properties": {
             "name": {
               "description": "Name of the referent.",
@@ -99,7 +99,8 @@
             "alertmanager",
             "grafana",
             "githubdispatch",
-            "pagerduty"
+            "pagerduty",
+            "datadog"
           ],
           "type": "string"
         },
