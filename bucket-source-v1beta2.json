@@ -64,6 +64,10 @@
           "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
           "type": "string"
         },
+        "prefix": {
+          "description": "Prefix to use for server-side filtering of files in the Bucket.",
+          "type": "string"
+        },
         "provider": {
           "default": "generic",
           "description": "Provider of the object storage bucket. Defaults to 'generic', which expects an S3 (API) compatible object storage.",

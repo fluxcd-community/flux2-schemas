@@ -57,6 +57,10 @@
           "type": "object",
           "additionalProperties": false
         },
+        "insecure": {
+          "description": "Insecure allows connecting to a non-TLS HTTP container registry. This field is only taken into account if the .spec.type field is set to 'oci'.",
+          "type": "boolean"
+        },
         "interval": {
           "description": "Interval at which the HelmRepository URL is checked for updates. This interval is approximate and may be subject to jitter to ensure efficient use of resources.",
           "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
@@ -96,8 +100,7 @@
           "type": "boolean"
         },
         "timeout": {
-          "default": "60s",
-          "description": "Timeout is used for the index fetch operation for an HTTPS helm repository, and for remote OCI Repository operations like pulling for an OCI helm repository. Its default value is 60s.",
+          "description": "Timeout is used for the index fetch operation for an HTTPS helm repository, and for remote OCI Repository operations like pulling for an OCI helm chart by the associated HelmChart. Its default value is 60s.",
           "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
           "type": "string"
         },
@@ -111,11 +114,11 @@
         },
         "url": {
           "description": "URL of the Helm repository, a valid URL contains at least a protocol and host.",
+          "pattern": "^(http|https|oci)://.*$",
           "type": "string"
         }
       },
       "required": [
-        "interval",
         "url"
       ],
       "type": "object",
