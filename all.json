@@ -10,6 +10,9 @@
       "$ref": "_definitions.json#/definitions/notification.toolkit.fluxcd.io.v1beta3.Alert"
     },
     {
+      "$ref": "_definitions.json#/definitions/source.toolkit.fluxcd.io.v1.Bucket"
+    },
+    {
       "$ref": "_definitions.json#/definitions/source.toolkit.fluxcd.io.v1beta1.Bucket"
     },
     {
