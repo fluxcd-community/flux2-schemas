@@ -269,13 +269,13 @@
                   },
                   "name": {
                     "description": "Name of the referent\nIf multiple resources are targeted `*` may be set.",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   },
                   "namespace": {
                     "description": "Namespace of the referent",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   }
@@ -485,13 +485,13 @@
                   },
                   "name": {
                     "description": "Name of the referent\nIf multiple resources are targeted `*` may be set.",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   },
                   "namespace": {
                     "description": "Namespace of the referent",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   }
@@ -1611,6 +1611,13 @@
               "type": "object",
               "additionalProperties": false
             },
+            "sparseCheckout": {
+              "description": "SparseCheckout specifies a list of directories to checkout when cloning\nthe repository. If specified, only these directories are included in the\nArtifact produced for this GitRepository.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "suspend": {
               "description": "Suspend tells the controller to suspend the reconciliation of this\nGitRepository.",
               "type": "boolean"
@@ -1881,6 +1888,13 @@
             "observedRecurseSubmodules": {
               "description": "ObservedRecurseSubmodules is the observed resource submodules\nconfiguration used to produce the current Artifact.",
               "type": "boolean"
+            },
+            "observedSparseCheckout": {
+              "description": "ObservedSparseCheckout is the observed list of directories used to\nproduce the current Artifact.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             },
             "sourceVerificationMode": {
               "description": "SourceVerificationMode is the last used verification mode indicating\nwhich Git object(s) have been verified.",
@@ -7814,6 +7828,16 @@
         "spec": {
           "description": "ImagePolicySpec defines the parameters for calculating the\nImagePolicy.",
           "properties": {
+            "digestReflectionPolicy": {
+              "default": "Never",
+              "description": "DigestReflectionPolicy governs the setting of the `.status.latestRef.digest` field.\n\nNever: The digest field will always be set to the empty string.\n\nIfNotPresent: The digest field will be set to the digest of the elected\nlatest image if the field is empty and the image did not change.\n\nAlways: The digest field will always be set to the digest of the elected\nlatest image.\n\nDefault: Never.",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ],
+              "type": "string"
+            },
             "filterTags": {
               "description": "FilterTags enables filtering for only a subset of tags based on a set of\nrules. If no rules are provided, all the tags from the repository will be\nordered and compared.",
               "properties": {
@@ -7846,6 +7870,11 @@
               ],
               "type": "object",
               "additionalProperties": false
+            },
+            "interval": {
+              "description": "Interval is the length of time to wait between\nrefreshing the digest of the latest tag when the\nreflection policy is set to \"Always\".\n\nDefaults to 10m.",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
+              "type": "string"
             },
             "policy": {
               "description": "Policy gives the particulars of the policy to be followed in\nselecting the most recent image",
@@ -7906,6 +7935,16 @@
             "policy"
           ],
           "type": "object",
+          "x-kubernetes-validations": [
+            {
+              "message": "spec.interval is only accepted when spec.digestReflectionPolicy is set to 'Always'",
+              "rule": "!has(self.interval) || (has(self.digestReflectionPolicy) && self.digestReflectionPolicy == 'Always')"
+            },
+            {
+              "message": "spec.interval must be set when spec.digestReflectionPolicy is set to 'Always'",
+              "rule": "has(self.interval) || !has(self.digestReflectionPolicy) || self.digestReflectionPolicy != 'Always'"
+            }
+          ],
           "additionalProperties": false
         },
         "status": {
@@ -7970,16 +8009,62 @@
               "type": "array"
             },
             "latestImage": {
-              "description": "LatestImage gives the first in the list of images scanned by\nthe image repository, when filtered and ordered according to\nthe policy.",
+              "description": "LatestImage gives the first in the list of images scanned by\nthe image repository, when filtered and ordered according to\nthe policy.\n\nDeprecated: Replaced by the composite \"latestRef\" field.",
               "type": "string"
+            },
+            "latestRef": {
+              "description": "LatestRef gives the first in the list of images scanned by\nthe image repository, when filtered and ordered according\nto the policy.",
+              "properties": {
+                "digest": {
+                  "description": "Digest is the image's digest.",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the bare image's name.",
+                  "type": "string"
+                },
+                "tag": {
+                  "description": "Tag is the image's tag.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "tag"
+              ],
+              "type": "object",
+              "additionalProperties": false
             },
             "observedGeneration": {
               "format": "int64",
               "type": "integer"
             },
             "observedPreviousImage": {
-              "description": "ObservedPreviousImage is the observed previous LatestImage. It is used\nto keep track of the previous and current images.",
+              "description": "ObservedPreviousImage is the observed previous LatestImage. It is used\nto keep track of the previous and current images.\n\nDeprecated: Replaced by the composite \"observedPreviousRef\" field.",
               "type": "string"
+            },
+            "observedPreviousRef": {
+              "description": "ObservedPreviousRef is the observed previous LatestRef. It is used\nto keep track of the previous and current images.",
+              "properties": {
+                "digest": {
+                  "description": "Digest is the image's digest.",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the bare image's name.",
+                  "type": "string"
+                },
+                "tag": {
+                  "description": "Tag is the image's tag.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "tag"
+              ],
+              "type": "object",
+              "additionalProperties": false
             }
           },
           "type": "object",
@@ -9137,6 +9222,10 @@
               "additionalProperties": {
                 "description": "ImageRef represents an image reference.",
                 "properties": {
+                  "digest": {
+                    "description": "Digest is the image's digest.",
+                    "type": "string"
+                  },
                   "name": {
                     "description": "Name is the bare image's name.",
                     "type": "string"
@@ -9229,7 +9318,7 @@
                   "type": "string"
                 },
                 "secretRef": {
-                  "description": "The secret name containing the private OpenPGP keys used for decryption.",
+                  "description": "The secret name containing the private OpenPGP keys used for decryption.\nA static credential for a cloud provider defined inside the Secret\ntakes priority to secret-less authentication with the ServiceAccountName\nfield.",
                   "properties": {
                     "name": {
                       "description": "Name of the referent.",
@@ -9241,6 +9330,10 @@
                   ],
                   "type": "object",
                   "additionalProperties": false
+                },
+                "serviceAccountName": {
+                  "description": "ServiceAccountName is the name of the service account used to\nauthenticate with KMS services from cloud providers. If a\nstatic credential for a given cloud provider is defined\ninside the Secret referenced by SecretRef, that static\ncredential takes priority.",
+                  "type": "string"
                 }
               },
               "required": [
@@ -9250,10 +9343,11 @@
               "additionalProperties": false
             },
             "deletionPolicy": {
-              "description": "DeletionPolicy can be used to control garbage collection when this\nKustomization is deleted. Valid values are ('MirrorPrune', 'Delete',\n'Orphan'). 'MirrorPrune' mirrors the Prune field (orphan if false,\ndelete if true). Defaults to 'MirrorPrune'.",
+              "description": "DeletionPolicy can be used to control garbage collection when this\nKustomization is deleted. Valid values are ('MirrorPrune', 'Delete',\n'WaitForTermination', 'Orphan'). 'MirrorPrune' mirrors the Prune field\n(orphan if false, delete if true). Defaults to 'MirrorPrune'.",
               "enum": [
                 "MirrorPrune",
                 "Delete",
+                "WaitForTermination",
                 "Orphan"
               ],
               "type": "string"
@@ -10897,6 +10991,372 @@
       },
       "type": "object"
     },
+    "source.toolkit.fluxcd.io.v1.OCIRepository": {
+      "description": "OCIRepository is the Schema for the ocirepositories API",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+          "type": "string",
+          "enum": [
+            "source.toolkit.fluxcd.io/v1"
+          ]
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+          "type": "string",
+          "enum": [
+            "OCIRepository"
+          ]
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "spec": {
+          "description": "OCIRepositorySpec defines the desired state of OCIRepository",
+          "properties": {
+            "certSecretRef": {
+              "description": "CertSecretRef can be given the name of a Secret containing\neither or both of\n\n- a PEM-encoded client certificate (`tls.crt`) and private\nkey (`tls.key`);\n- a PEM-encoded CA certificate (`ca.crt`)\n\nand whichever are supplied, will be used for connecting to the\nregistry. The client cert and key are useful if you are\nauthenticating with a certificate; the CA cert is useful if\nyou are using a self-signed server certificate. The Secret must\nbe of type `Opaque` or `kubernetes.io/tls`.",
+              "properties": {
+                "name": {
+                  "description": "Name of the referent.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "ignore": {
+              "description": "Ignore overrides the set of excluded patterns in the .sourceignore format\n(which is the same as .gitignore). If not provided, a default will be used,\nconsult the documentation for your version to find out what those are.",
+              "type": "string"
+            },
+            "insecure": {
+              "description": "Insecure allows connecting to a non-TLS HTTP container registry.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Interval at which the OCIRepository URL is checked for updates.\nThis interval is approximate and may be subject to jitter to ensure\nefficient use of resources.",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
+              "type": "string"
+            },
+            "layerSelector": {
+              "description": "LayerSelector specifies which layer should be extracted from the OCI artifact.\nWhen not specified, the first layer found in the artifact is selected.",
+              "properties": {
+                "mediaType": {
+                  "description": "MediaType specifies the OCI media type of the layer\nwhich should be extracted from the OCI Artifact. The\nfirst layer matching this type is selected.",
+                  "type": "string"
+                },
+                "operation": {
+                  "description": "Operation specifies how the selected layer should be processed.\nBy default, the layer compressed content is extracted to storage.\nWhen the operation is set to 'copy', the layer compressed content\nis persisted to storage as it is.",
+                  "enum": [
+                    "extract",
+                    "copy"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "provider": {
+              "default": "generic",
+              "description": "The provider used for authentication, can be 'aws', 'azure', 'gcp' or 'generic'.\nWhen not specified, defaults to 'generic'.",
+              "enum": [
+                "generic",
+                "aws",
+                "azure",
+                "gcp"
+              ],
+              "type": "string"
+            },
+            "proxySecretRef": {
+              "description": "ProxySecretRef specifies the Secret containing the proxy configuration\nto use while communicating with the container registry.",
+              "properties": {
+                "name": {
+                  "description": "Name of the referent.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "ref": {
+              "description": "The OCI reference to pull and monitor for changes,\ndefaults to the latest tag.",
+              "properties": {
+                "digest": {
+                  "description": "Digest is the image digest to pull, takes precedence over SemVer.\nThe value should be in the format 'sha256:<HASH>'.",
+                  "type": "string"
+                },
+                "semver": {
+                  "description": "SemVer is the range of tags to pull selecting the latest within\nthe range, takes precedence over Tag.",
+                  "type": "string"
+                },
+                "semverFilter": {
+                  "description": "SemverFilter is a regex pattern to filter the tags within the SemVer range.",
+                  "type": "string"
+                },
+                "tag": {
+                  "description": "Tag is the image tag to pull, defaults to latest.",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "secretRef": {
+              "description": "SecretRef contains the secret name containing the registry login\ncredentials to resolve image metadata.\nThe secret must be of type kubernetes.io/dockerconfigjson.",
+              "properties": {
+                "name": {
+                  "description": "Name of the referent.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "serviceAccountName": {
+              "description": "ServiceAccountName is the name of the Kubernetes ServiceAccount used to authenticate\nthe image pull if the service account has attached pull secrets. For more information:\nhttps://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account",
+              "type": "string"
+            },
+            "suspend": {
+              "description": "This flag tells the controller to suspend the reconciliation of this source.",
+              "type": "boolean"
+            },
+            "timeout": {
+              "default": "60s",
+              "description": "The timeout for remote OCI Repository operations like pulling, defaults to 60s.",
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
+              "type": "string"
+            },
+            "url": {
+              "description": "URL is a reference to an OCI artifact repository hosted\non a remote container registry.",
+              "pattern": "^oci://.*$",
+              "type": "string"
+            },
+            "verify": {
+              "description": "Verify contains the secret name containing the trusted public keys\nused to verify the signature and specifies which provider to use to check\nwhether OCI image is authentic.",
+              "properties": {
+                "matchOIDCIdentity": {
+                  "description": "MatchOIDCIdentity specifies the identity matching criteria to use\nwhile verifying an OCI artifact which was signed using Cosign keyless\nsigning. The artifact's identity is deemed to be verified if any of the\nspecified matchers match against the identity.",
+                  "items": {
+                    "description": "OIDCIdentityMatch specifies options for verifying the certificate identity,\ni.e. the issuer and the subject of the certificate.",
+                    "properties": {
+                      "issuer": {
+                        "description": "Issuer specifies the regex pattern to match against to verify\nthe OIDC issuer in the Fulcio certificate. The pattern must be a\nvalid Go regular expression.",
+                        "type": "string"
+                      },
+                      "subject": {
+                        "description": "Subject specifies the regex pattern to match against to verify\nthe identity subject in the Fulcio certificate. The pattern must\nbe a valid Go regular expression.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "issuer",
+                      "subject"
+                    ],
+                    "type": "object",
+                    "additionalProperties": false
+                  },
+                  "type": "array"
+                },
+                "provider": {
+                  "default": "cosign",
+                  "description": "Provider specifies the technology used to sign the OCI Artifact.",
+                  "enum": [
+                    "cosign",
+                    "notation"
+                  ],
+                  "type": "string"
+                },
+                "secretRef": {
+                  "description": "SecretRef specifies the Kubernetes Secret containing the\ntrusted public keys.",
+                  "properties": {
+                    "name": {
+                      "description": "Name of the referent.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "provider"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "interval",
+            "url"
+          ],
+          "type": "object",
+          "additionalProperties": false
+        },
+        "status": {
+          "default": {
+            "observedGeneration": -1
+          },
+          "description": "OCIRepositoryStatus defines the observed state of OCIRepository",
+          "properties": {
+            "artifact": {
+              "description": "Artifact represents the output of the last successful OCI Repository sync.",
+              "properties": {
+                "digest": {
+                  "description": "Digest is the digest of the file in the form of '<algorithm>:<checksum>'.",
+                  "pattern": "^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$",
+                  "type": "string"
+                },
+                "lastUpdateTime": {
+                  "description": "LastUpdateTime is the timestamp corresponding to the last update of the\nArtifact.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Metadata holds upstream information such as OCI annotations.",
+                  "type": "object"
+                },
+                "path": {
+                  "description": "Path is the relative file path of the Artifact. It can be used to locate\nthe file in the root of the Artifact storage on the local file system of\nthe controller managing the Source.",
+                  "type": "string"
+                },
+                "revision": {
+                  "description": "Revision is a human-readable identifier traceable in the origin source\nsystem. It can be a Git commit SHA, Git tag, a Helm chart version, etc.",
+                  "type": "string"
+                },
+                "size": {
+                  "description": "Size is the number of bytes in the file.",
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "url": {
+                  "description": "URL is the HTTP address of the Artifact as exposed by the controller\nmanaging the Source. It can be used to retrieve the Artifact for\nconsumption, e.g. by another controller applying the Artifact contents.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "lastUpdateTime",
+                "path",
+                "revision",
+                "url"
+              ],
+              "type": "object",
+              "additionalProperties": false
+            },
+            "conditions": {
+              "description": "Conditions holds the conditions for the OCIRepository.",
+              "items": {
+                "description": "Condition contains details for one aspect of the current state of this API Resource.",
+                "properties": {
+                  "lastTransitionTime": {
+                    "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "message": {
+                    "description": "message is a human readable message indicating details about the transition.\nThis may be an empty string.",
+                    "maxLength": 32768,
+                    "type": "string"
+                  },
+                  "observedGeneration": {
+                    "description": "observedGeneration represents the .metadata.generation that the condition was set based upon.\nFor instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date\nwith respect to the current state of the instance.",
+                    "format": "int64",
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "description": "reason contains a programmatic identifier indicating the reason for the condition's last transition.\nProducers of specific condition types may define expected values and meanings for this field,\nand whether the values are considered a guaranteed API.\nThe value should be a CamelCase string.\nThis field may not be empty.",
+                    "maxLength": 1024,
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$",
+                    "type": "string"
+                  },
+                  "status": {
+                    "description": "status of the condition, one of True, False, Unknown.",
+                    "enum": [
+                      "True",
+                      "False",
+                      "Unknown"
+                    ],
+                    "type": "string"
+                  },
+                  "type": {
+                    "description": "type of condition in CamelCase or in foo.example.com/CamelCase.",
+                    "maxLength": 316,
+                    "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "lastTransitionTime",
+                  "message",
+                  "reason",
+                  "status",
+                  "type"
+                ],
+                "type": "object",
+                "additionalProperties": false
+              },
+              "type": "array"
+            },
+            "lastHandledReconcileAt": {
+              "description": "LastHandledReconcileAt holds the value of the most recent\nreconcile request value, so a change of the annotation value\ncan be detected.",
+              "type": "string"
+            },
+            "observedGeneration": {
+              "description": "ObservedGeneration is the last observed generation.",
+              "format": "int64",
+              "type": "integer"
+            },
+            "observedIgnore": {
+              "description": "ObservedIgnore is the observed exclusion patterns used for constructing\nthe source artifact.",
+              "type": "string"
+            },
+            "observedLayerSelector": {
+              "description": "ObservedLayerSelector is the observed layer selector used for constructing\nthe source artifact.",
+              "properties": {
+                "mediaType": {
+                  "description": "MediaType specifies the OCI media type of the layer\nwhich should be extracted from the OCI Artifact. The\nfirst layer matching this type is selected.",
+                  "type": "string"
+                },
+                "operation": {
+                  "description": "Operation specifies how the selected layer should be processed.\nBy default, the layer compressed content is extracted to storage.\nWhen the operation is set to 'copy', the layer compressed content\nis persisted to storage as it is.",
+                  "enum": [
+                    "extract",
+                    "copy"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "additionalProperties": false
+            },
+            "url": {
+              "description": "URL is the download link for the artifact output of the last OCI Repository sync.",
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "type": "object"
+    },
     "source.toolkit.fluxcd.io.v1beta2.OCIRepository": {
       "description": "OCIRepository is the Schema for the ocirepositories API",
       "properties": {
@@ -11702,6 +12162,10 @@
               "maxLength": 2048,
               "type": "string"
             },
+            "commitStatusExpr": {
+              "description": "CommitStatusExpr is a CEL expression that evaluates to a string value\nthat can be used to generate a custom commit status message for use\nwith eligible Provider types (github, gitlab, gitea, bitbucketserver,\nbitbucket, azuredevops). Supported variables are: event, provider,\nand alert.",
+              "type": "string"
+            },
             "interval": {
               "description": "Interval at which to reconcile the Provider with its Secret references.\nDeprecated and not used in v1beta3.",
               "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
@@ -11726,6 +12190,10 @@
               ],
               "type": "object",
               "additionalProperties": false
+            },
+            "serviceAccountName": {
+              "description": "ServiceAccountName is the name of the service account used to\nauthenticate with services from cloud providers. An error is thrown if a\nstatic credential is also defined inside the Secret referenced by the\nSecretRef.",
+              "type": "string"
             },
             "suspend": {
               "description": "Suspend tells the controller to suspend subsequent\nevents handling for this Provider.",
@@ -11779,6 +12247,12 @@
             "type"
           ],
           "type": "object",
+          "x-kubernetes-validations": [
+            {
+              "message": "spec.commitStatusExpr is only supported for the 'github', 'gitlab', 'gitea', 'bitbucketserver', 'bitbucket', 'azuredevops' provider types",
+              "rule": "self.type == 'github' || self.type == 'gitlab' || self.type == 'gitea' || self.type == 'bitbucketserver' || self.type == 'bitbucket' || self.type == 'azuredevops' || !has(self.commitStatusExpr)"
+            }
+          ],
           "additionalProperties": false
         }
       },
@@ -11858,13 +12332,13 @@
                   },
                   "name": {
                     "description": "Name of the referent\nIf multiple resources are targeted `*` may be set.",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   },
                   "namespace": {
                     "description": "Namespace of the referent",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   }
@@ -12279,13 +12753,13 @@
                   },
                   "name": {
                     "description": "Name of the referent\nIf multiple resources are targeted `*` may be set.",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   },
                   "namespace": {
                     "description": "Namespace of the referent",
-                    "maxLength": 53,
+                    "maxLength": 253,
                     "minLength": 1,
                     "type": "string"
                   }

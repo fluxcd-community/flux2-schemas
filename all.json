@@ -82,6 +82,9 @@
       "$ref": "_definitions.json#/definitions/kustomize.toolkit.fluxcd.io.v1beta2.Kustomization"
     },
     {
+      "$ref": "_definitions.json#/definitions/source.toolkit.fluxcd.io.v1.OCIRepository"
+    },
+    {
       "$ref": "_definitions.json#/definitions/source.toolkit.fluxcd.io.v1beta2.OCIRepository"
     },
     {
